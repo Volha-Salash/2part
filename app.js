@@ -1,95 +1,115 @@
-async function fetchJSON(url) {
+const host = "http://167.71.69.158";
+const dataPath = "/static/test.json";
+
+async function fetchTermsOfUse(url) {
   const response = await fetch(url);
   const data = await response.json();
   data.terms_of_use.paragraphs.sort((a, b) => a.index - b.index);
   return data;
 }
 
-async function acceptTermsOfUse(termsOfUse) {
-  try {
-    const paragraphs = termsOfUse.terms_of_use.paragraphs;
+function renderTermsOfUse(termsOfUse) {
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  const paragraphs = termsOfUse.terms_of_use.paragraphs;
+  paragraphs.forEach((paragraph, index) => {
+    const textWrapper = document.createElement('div');
+    const title = document.createElement('h3');
+    const content = document.createElement('p');
 
-    const text = document.getElementById('terms');
-    text.innerHTML = '';
+    title.textContent = paragraph.title;
+    content.textContent = paragraph.content;
 
-    paragraphs.forEach((paragraph, index) => {
-      const termsContainer = document.createElement('div');
-      const title = document.createElement('h3');
-      const content = document.createElement('p');
+    textWrapper.appendChild(title);
+    textWrapper.appendChild(content);
 
-      title.textContent = paragraph.title;
-      content.textContent = paragraph.content;
-
-      termsContainer.appendChild(title);
-      termsContainer.appendChild(content);
-
-      if (index === paragraphs.length - 1) {
-        const acceptButton = document.createElement('button');
-        acceptButton.textContent = 'Accept';
-        acceptButton.addEventListener('click', async () => {
-          localStorage.setItem('isTermsOfUseAccepted', 'true');
-          window.location.hash = '#images';
-        });
-        termsContainer.appendChild(acceptButton);
-      }
-
-      terms.appendChild(termsContainer);
-    });
-  } catch (error) {
-    console.error('Error loading:', error);
-  }
+    if (index === paragraphs.length - 1) {
+      const acceptButton = handleAcceptButton(termsOfUse);
+      acceptButton.textContent = 'Accept';
+      textWrapper.appendChild(acceptButton);
+    }
+    root.appendChild(textWrapper);
+  });
 }
 
+function handleAcceptButton(termsOfUse) {
+  const acceptButton = document.createElement('button');
+  acceptButton.textContent = 'Accept';
+  acceptButton.addEventListener('click', async () => {
+    await acceptTermsOfUse(termsOfUse);
+  });
 
-async function renderImageToCanvas(imageUrl) {
-  const canvasContainer = document.getElementById('terms');
+  return acceptButton;
+}
+
+async function acceptTermsOfUse(termsOfUse) {
+  localStorage.setItem("isTermsOfUseAccepted", "true");
+  await renderImageGallery(termsOfUse.images);
+}
+
+async function renderImageGallery(images) {
+  const canvasContainer = document.getElementById('root');
   canvasContainer.innerHTML = '';
 
-  for (const image of imageUrl) {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(img, 0, 0);
-      canvasContainer.appendChild(canvas);
+  const canvasPromises = images.map(async (image) => {
+    try {
+      const imageUrl = `${host}${image.image_url}`;
+      const canvasWrapper = document.createElement('div');
+
+      const canvas = await renderImageToCanvas(imageUrl);
+      canvasWrapper.appendChild(canvas);
 
       const saveButton = document.createElement('button');
       saveButton.textContent = 'Save';
       saveButton.addEventListener('click', () => {
-        saveImage(image.image_url);
+        saveImage(canvas, imageUrl.split('/').pop());
       });
-      canvasContainer.appendChild(saveButton);
+      canvasWrapper.appendChild(saveButton);
+      canvasContainer.appendChild(canvasWrapper);
+    } catch (error) {
+      console.error('Error rendering image:', error);
+    }
+  });
+
+  await Promise.all(canvasPromises);
+}
+
+async function renderImageToCanvas(imageUrl) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const image = new Image();
+
+    image.onload = function () {
+      canvas.width = this.width;
+      canvas.height = this.height;
+      context.drawImage(image, 0, 0, this.width, this.height);
+      resolve(canvas);
     };
-    img.src = `http://167.71.69.158${image.image_url}`;
-  }
-}
-function saveImage(canvas) {
-  const link = document.createElement('a');
-  link.href = canvas.toDataURL();
-  link.download = imageUrl.slice(imageUrl.lastIndexOf('/') + 1);
-  link.click();
-}
-async function handleRoute(route) {
-  const termsOfUse = await fetchJSON('http://167.71.69.158/static/test.json');
-  const imageUrl = termsOfUse.images;
-  const termsAccepted = localStorage.getItem('isTermsOfUseAccepted');
-  acceptTermsOfUse(termsOfUse);
-  if (route === '#images' && termsAccepted) {
-    renderImageToCanvas(imageUrl);
-  }
-}
-
-function start() {
-  const initialRoute = window.location.hash;
-  handleRoute(initialRoute);
-
-  window.addEventListener('hashchange', () => {
-    const newRoute = window.location.hash;
-    handleRoute(newRoute);
+    image.onerror = () => {
+      reject(new Error('Image failed to load'));
+    };
+    image.src = imageUrl;
   });
 }
 
-start();
+async function saveImage(canvas, imageName) {
+  const canvasUrl = canvas.toDataURL();
+  const imageDownloadLink = document.createElement("a");
+  imageDownloadLink.href = canvasUrl;
+  imageDownloadLink.download = imageName;
+  imageDownloadLink.click();
+  imageDownloadLink.remove();
+};
 
+async function start() {
+  const data = await fetchTermsOfUse(host + dataPath);
+  const isTermsOfUseAccepted = localStorage.getItem("isTermsOfUseAccepted");
+  if (isTermsOfUseAccepted === "true") {
+    await renderImageGallery(data.images);
+  } else {
+    renderTermsOfUse(data);
+  }
+}
+
+start();
