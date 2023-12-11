@@ -79,7 +79,7 @@ async function renderImageToCanvas(imageUrl) {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     const image = new Image();
-
+    image.crossOrigin="anonymous";
     image.onload = function () {
       canvas.width = this.width;
       canvas.height = this.height;
@@ -104,12 +104,13 @@ async function saveImage(canvas, imageName) {
 
 async function start() {
   const data = await fetchTermsOfUse(host + dataPath);
-  const isTermsOfUseAccepted = localStorage.getItem("isTermsOfUseAccepted");
-  if (isTermsOfUseAccepted === "true") {
-    await renderImageGallery(data.images);
-  } else {
-    renderTermsOfUse(data);
-  }
+ // const isTermsOfUseAccepted = localStorage.getItem("isTermsOfUseAccepted");
+  renderTermsOfUse(data);
+  // if (isTermsOfUseAccepted === "true") {
+  //   await renderImageGallery(data.images);
+  // } else {
+  //   renderTermsOfUse(data);
+  // }
 }
 
 start();
