@@ -8,7 +8,7 @@ async function fetchTermsOfUse(url) {
   return data;
 }
 
-function renderTermsOfUse(termsOfUse) {
+async function acceptTermsOfUse(termsOfUse)  {
   const root = document.getElementById('root');
   root.innerHTML = '';
   const paragraphs = termsOfUse.terms_of_use.paragraphs;
@@ -36,15 +36,10 @@ function handleAcceptButton(termsOfUse) {
   const acceptButton = document.createElement('button');
   acceptButton.textContent = 'Accept';
   acceptButton.addEventListener('click', async () => {
-    await acceptTermsOfUse(termsOfUse);
+  await renderImageGallery(termsOfUse.images);
   });
 
   return acceptButton;
-}
-
-async function acceptTermsOfUse(termsOfUse) {
-  localStorage.setItem("isTermsOfUseAccepted", "true");
-  await renderImageGallery(termsOfUse.images);
 }
 
 async function renderImageGallery(images) {
@@ -104,13 +99,7 @@ async function saveImage(canvas, imageName) {
 
 async function start() {
   const data = await fetchTermsOfUse(host + dataPath);
- // const isTermsOfUseAccepted = localStorage.getItem("isTermsOfUseAccepted");
-  renderTermsOfUse(data);
-  // if (isTermsOfUseAccepted === "true") {
-  //   await renderImageGallery(data.images);
-  // } else {
-  //   renderTermsOfUse(data);
-  // }
+  await acceptTermsOfUse(data);
 }
 
 start();
