@@ -24,22 +24,15 @@ async function acceptTermsOfUse(termsOfUse)  {
     textWrapper.appendChild(content);
 
     if (index === paragraphs.length - 1) {
-      const acceptButton = handleAcceptButton(termsOfUse);
+      const acceptButton = document.createElement('button');
       acceptButton.textContent = 'Accept';
+      acceptButton.addEventListener('click', async () => {
+      await renderImageGallery(termsOfUse.images);
+      });
       textWrapper.appendChild(acceptButton);
     }
     root.appendChild(textWrapper);
   });
-}
-
-function handleAcceptButton(termsOfUse) {
-  const acceptButton = document.createElement('button');
-  acceptButton.textContent = 'Accept';
-  acceptButton.addEventListener('click', async () => {
-  await renderImageGallery(termsOfUse.images);
-  });
-
-  return acceptButton;
 }
 
 async function renderImageGallery(images) {
@@ -68,13 +61,18 @@ async function renderImageGallery(images) {
 
   await Promise.all(canvasPromises);
 }
+function createImageGallery() {
+  const galleryContainer = document.getElementById('root');
+  const galleryWrapper = document.createElement('div');
+  galleryContainer.appendChild(galleryWrapper);
+}
 
 async function renderImageToCanvas(imageUrl) {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
     const image = new Image();
-    image.crossOrigin="anonymous";
+    image.crossOrigin = "anonymous";
     image.onload = function () {
       canvas.width = this.width;
       canvas.height = this.height;
@@ -98,8 +96,9 @@ async function saveImage(canvas, imageName) {
 };
 
 async function start() {
-  const data = await fetchTermsOfUse(host + dataPath);
-  await acceptTermsOfUse(data);
+  const termsOfUse = await fetchTermsOfUse(host + dataPath);
+  createImageGallery();
+  await acceptTermsOfUse(termsOfUse);
 }
 
 start();
